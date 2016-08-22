@@ -1,8 +1,9 @@
+from subprocess import Popen, PIPE, STDOUT
 import sublime
-from subprocess import call
 
 
 class LinuxBrowserRefresh:
+    
     def __init__(self, activate_browser):
         # activate_browser is always true on Windows since you can't
         # send keys to an inactive window programmatically. We ignore it.
@@ -36,18 +37,16 @@ class LinuxBrowserRefresh:
 
     def SendKeysToAllWindows(self, cls, key):
         "Sends the keystroke to all windows whose title matches the regex"
+        cmd = "xdotool search --onlyvisible --class "+cls+" | while read w; do xdotool key --window $w "+key+"; done "
 
-        cmd = ['xdotool', 'search', '--sync', '--onlyvisible', '--class', cls, 'windowfocus', 'key', key]
-
-        if self.activate_browser:
-            cmd += ['windowactivate']
-
-        status_code = call(cmd)
-
-        if status_code != 0:
+        out = Popen(cmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
+        stdout, stderr = out.communicate()
+        status_code = stdout.decode()
+        
+        if status_code != "":
             sublime.error_message(
                 'Browser Refresh cannot execute the specified program.\n\n'
-                '%s\n\n'
+                '[Error]: %s\n\n'
                 'If program \'xdotool\' is currently not installed '
                 'you can install it by typing:\n\n'
-                'sudo apt-get install xdotool' % " ".join(cmd))
+                'sudo apt-get install xdotool' % " ".join(status_code))
